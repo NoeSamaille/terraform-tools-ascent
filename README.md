@@ -1,16 +1,6 @@
-# Starter kit for a Terraform module
+# Ascent terraform module
 
-This is a Starter kit to help with the creation of Terraform modules. The basic structure of a Terraform module is fairly
-simple and consists of the following basic values:
-
-- README.md - provides a description of the module
-- main.tf - defiens the logic for the module
-- variables.tf (optional) - defines the input variables for the module
-- outputs.tf (optional) - defines the values that are output from the module
-
-Beyond those files, any other content can be added and organized however you see fit. For example, you can add a `scripts/` directory
-that contains shell scripts executed by a `local-exec` `null_resource` in the terraform module. The contents will depend on what your
-module does and how it does it.
+Installs the ASCENT tool into the cluster.
 
 ## Instructions for creating a new module
 
@@ -22,16 +12,20 @@ module does and how it does it.
 ## Software dependencies
 
 The module depends on the following software components:
+- MongoDB
+- Ascent Backend-For-Frontend
+- Ascent UI
+- IBM Cloud Object Storage
 
 ### Command-line tools
 
-- terraform - v12
+- terraform - `v12`
 - kubectl
 
 ### Terraform providers
 
-- IBM Cloud provider >= 1.5.3
-- Helm provider >= 1.1.1 (provided by Terraform)
+- IBM Cloud provider `>= 1.5.3`
+- Helm provider `>= 1.1.1` (provided by Terraform)
 
 ## Module dependencies
 
@@ -39,13 +33,12 @@ This module makes use of the output from other modules:
 
 - Cluster - github.com/ibm-garage-cloud/terraform-ibm-container-platform.git
 - Namespace - github.com/ibm-garage-clout/terraform-cluster-namespace.git
-- etc
 
 ## Example usage
 
 ```hcl-terraform
-module "dev_tools_argocd" {
-  source = "github.com/ibm-garage-cloud/terraform-tools-argocd.git?ref=v1.0.0"
+module "dev_tools_ascent" {
+  source = "github.com/ibm-garage-cloud/terraform-tools-ascent.git?ref=v1.0.0"
 
   cluster_config_file = module.dev_cluster.config_file_path
   cluster_type        = module.dev_cluster.type
