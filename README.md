@@ -2,13 +2,6 @@
 
 Installs the ASCENT tool into the cluster.
 
-## Instructions for creating a new module
-
-1. Update the title and description in the README to match the module you are creating
-2. Fill out the remaining sections in the README template as appropriate
-3. Implement your logic in the in the main.tf, variables.tf, and outputs.tf
-4. Use releases/tags to manage release versions of your module
-
 ## Software dependencies
 
 The module depends on the following software components:
@@ -19,34 +12,38 @@ The module depends on the following software components:
 
 ### Command-line tools
 
-- terraform - `v12`
+- terraform - `>= v0.13.0`
 - kubectl
 
 ### Terraform providers
 
-- IBM Cloud provider `>= 1.5.3`
+- IBM Cloud provider `>= 1.22.0`
 - Helm provider `>= 1.1.1` (provided by Terraform)
 
 ## Module dependencies
 
 This module makes use of the output from other modules:
 
-- Cluster - github.com/ibm-garage-cloud/terraform-ibm-container-platform.git
-- Namespace - github.com/ibm-garage-clout/terraform-cluster-namespace.git
+- Cluster - github.com/cloud-native-toolkit/terraform-k8s-ocp-cluster
+- Namespace - github.com/cloud-native-toolkit/terraform-k8s-namespace
+- IBM Cloud Object Storage - github.com/cloud-native-toolkit/terraform-ibm-object-storage
 
 ## Example usage
 
 ```hcl-terraform
 module "dev_tools_ascent" {
-  source = "github.com/ibm-garage-cloud/terraform-tools-ascent.git?ref=v1.0.0"
+  source = "github.com/ibm-garage-cloud/terraform-tools-ascent.git"
 
-  cluster_config_file = module.dev_cluster.config_file_path
-  cluster_type        = module.dev_cluster.type
-  app_namespace       = module.dev_cluster_namespaces.tools_namespace_name
-  ingress_subdomain   = module.dev_cluster.ingress_hostname
-  olm_namespace       = module.dev_software_olm.olm_namespace
-  operator_namespace  = module.dev_software_olm.target_namespace
-  name                = "argocd"
+  cluster_config_file       = module.dev_cluster.config_file_path
+  releases_namespace        = module.dev_tools_namespace.name
+  cluster_ingress_hostname  = module.dev_cluster.ingress_hostname
+  ibmcloud_api_key          = var.ibmcloud_api_key
+  cluster_name              = module.dev_cluster.name
+  cluster_type              = module.dev_cluster.type_code
+  cos_instance_id           = module.cos.id
+  cos_instance_name         = module.cos.name
+  cos_bucket_storage_class  = var.cos_bucket_storage_class
+  cos_bucket_cross_region_location  = var.cos_bucket_cross_region_location
 }
 ```
 

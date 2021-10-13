@@ -49,32 +49,6 @@ variable "vpc_cluster" {
   default     = false
 }
 
-variable "cluster_config_file" {
-  type        = string
-  description = "Cluster config file for Kubernetes cluster."
-}
-
-variable "releases_namespace" {
-  type        = string
-  description = "Name of the existing namespace where the Helm Releases will be deployed."
-}
-
-variable "cluster_ingress_hostname" {
-  type        = string
-  description = "Ingress hostname of the IKS cluster."
-}
-
-variable "cluster_type" {
-  type        = string
-  description = "The cluster type (openshift or ocp3 or ocp4 or kubernetes)"
-}
-
-variable "tool_config_maps" {
-  type = list(string)
-  description = "The list of config maps containing connectivity information for tools"
-  default = []
-}
-
 variable "tls_secret_name" {
   type        = string
   description = "The name of the secret containing the tls certificate values"
@@ -90,17 +64,6 @@ variable "gitops_dir" {
 variable "mode" {
   type        = string
   description = "The mode of operation for the module (setup)"
-  default     = ""
-}
-
-variable "ibmcloud_api_key" {
-  type        = string
-  description = "The IBM Cloud api token"
-}
-
-variable "cluster_name" {
-  type        = string
-  description = "The Name of the cluster"
   default     = ""
 }
 
@@ -126,4 +89,16 @@ variable "cos_bucket_storage_class" {
   type        = string
   description = "The storage class that you want to use for the bucket. Supported values are standard, vault, cold, flex, and smart."
   default     = "standard"
+}
+
+variable "cos_provision" {
+  type        = bool
+  description = "Flag indicating that cos instance should be provisioned"
+  default     = true
+}
+
+variable "cos_resource_location" {
+  type        = string
+  description = "Geographic location of the resource (e.g. us-south, us-east)"
+  default     = "global"
 }

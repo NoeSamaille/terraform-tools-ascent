@@ -1,5 +1,5 @@
 module "dev_tools_ascent" {
-  source = "./module"
+  source = "../.."
 
   cluster_config_file       = module.dev_cluster.config_file_path
   releases_namespace        = module.dev_tools_namespace.name

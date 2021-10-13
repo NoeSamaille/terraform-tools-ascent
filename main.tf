@@ -163,10 +163,10 @@ redirectURIs:
 secret: ${data.external.oauth_client_secret.result.token}
 EOF
     EOT
-  }
 
-  environment = {
-    KUBECONFIG = var.cluster_config_file
+    environment = {
+      KUBECONFIG = var.cluster_config_file
+    }
   }
 }
 resource "null_resource" "create_oauth_secret" {
@@ -174,10 +174,10 @@ resource "null_resource" "create_oauth_secret" {
     command = <<EOT
       oc create secret generic ascent-oauth-config --from-literal=api-url=$(oc whoami --show-server) --from-literal=oauth-config="{\"clientID\": \"ascent\", \"clientSecret\": \"${data.external.oauth_client_secret.result.token}\", \"api_endpoint\": \"$(oc whoami --show-server)\"}" -n ${var.releases_namespace}
     EOT
-  }
 
-  environment = {
-    KUBECONFIG = var.cluster_config_file
+    environment = {
+      KUBECONFIG = var.cluster_config_file
+    }
   }
 }
 resource "null_resource" "create_mongo_secret" {
@@ -185,10 +185,10 @@ resource "null_resource" "create_mongo_secret" {
     command = <<EOT
       kubectl create secret generic ascent-mongo-config --from-literal=binding="{\"connection\":{\"mongodb\":{\"composed\":[\"mongodb://ascent-admin:${data.external.mongo_password.result.token}@ascent-mongodb:27017/ascent-db\"],\"authentication\":{\"username\":\"ascent-admin\",\"password\":\"${data.external.mongo_password.result.token}\"},\"database\":\"ascent-db\",\"hosts\":[{\"hostname\":\"localhost\",\"port\":27017}]}}}" -n ${var.releases_namespace}
     EOT
-  }
 
-  environment = {
-    KUBECONFIG = var.cluster_config_file
+    environment = {
+      KUBECONFIG = var.cluster_config_file
+    }
   }
 }
 data "external" "instance_id" {
@@ -199,10 +199,10 @@ resource "null_resource" "create_ascent_cm" {
     command = <<EOT
       kubectl create configmap ascent --from-literal=route="${local.endpoint_url}" --from-literal=api-host="http://${local.chart_name_bff}" --from-literal=instance-id=${data.external.instance_id.result.token}
     EOT
-  }
 
-  environment = {
-    KUBECONFIG = var.cluster_config_file
+    environment = {
+      KUBECONFIG = var.cluster_config_file
+    }
   }
 }
 
@@ -217,6 +217,18 @@ resource "ibm_container_bind_service" "bind_service" {
   cluster_name_id       = var.cluster_name
   service_instance_name = var.cos_instance_name
   namespace_id          = var.releases_namespace
+}
+resource "null_resource" "create_cos_secret" {
+  depends_on = [ibm_container_bind_service.bind_service]
+  provisioner "local-exec" {
+    command = <<EOT
+      kubectl get secret binding-${var.cos_instance_name} -n ${var.releases_namespace} -o yaml | sed "s/binding-${var.cos_instance_name}/ascent-cos-config/g" | kubectl create -f -
+    EOT
+
+    environment = {
+      KUBECONFIG = var.cluster_config_file
+    }
+  }
 }
 
 # Set up MongoDB chart
@@ -241,7 +253,10 @@ resource "null_resource" "print_values_mongo" {
   }
 }
 resource "helm_release" "ascent_mongo" {
-  depends_on = [null_resource.setup_mongo_secret, local_file.values_mongo]
+  depends_on = [
+    null_resource.create_mongo_secret,
+    local_file.values_mongo
+  ]
   count = var.mode != "setup" ? 1 : 0
 
   name         = "ascent-mongodb"
@@ -270,7 +285,13 @@ resource "null_resource" "print_values_bff" {
   }
 }
 resource "helm_release" "ascent_bff" {
-  depends_on = [local_file.values_bff]
+  depends_on = [
+    null_resource.create_oauth_secret,
+    null_resource.create_mongo_secret,
+    null_resource.create_cos_secret,
+    null_resource.create_ascent_cm,
+    local_file.values_bff
+  ]
   count = var.mode != "setup" ? 1 : 0
 
   name         = local.chart_name_bff
@@ -299,7 +320,11 @@ resource "null_resource" "print_values_ui" {
   }
 }
 resource "helm_release" "ascent_ui" {
-  depends_on = [local_file.values_ui]
+  depends_on = [
+    null_resource.create_oauth_secret,
+    null_resource.create_ascent_cm,
+    local_file.values_ui
+  ]
   count = var.mode != "setup" ? 1 : 0
 
   name         = local.chart_name_ui
