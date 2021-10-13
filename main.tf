@@ -197,13 +197,26 @@ data "external" "instance_id" {
 resource "null_resource" "create_ascent_cm" {
   provisioner "local-exec" {
     command = <<EOT
-      kubectl create configmap ascent --from-literal=route="${local.endpoint_url}" --from-literal=api-host="http://${local.chart_name_bff}" --from-literal=instance-id=${data.external.instance_id.result}
+      kubectl create configmap ascent --from-literal=route="${local.endpoint_url}" --from-literal=api-host="http://${local.chart_name_bff}" --from-literal=instance-id=${data.external.instance_id.result.token}
     EOT
   }
 
   environment = {
     KUBECONFIG = var.cluster_config_file
   }
+}
+
+# Create Bucket and bind COS to cluster
+resource "ibm_cos_bucket" "ascent-bucket" {
+  bucket_name          = "ascent-storage-${data.external.instance_id.result.token}"
+  resource_instance_id = var.cos_instance_id
+  region_location      = var.cos_bucket_cross_region_location
+  storage_class        = var.cos_bucket_storage_class
+}
+resource "ibm_container_bind_service" "bind_service" {
+  cluster_name_id       = var.cluster_name
+  service_instance_name = var.cos_instance_name
+  namespace_id          = var.releases_namespace
 }
 
 # Set up MongoDB chart

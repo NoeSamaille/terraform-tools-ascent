@@ -41,3 +41,35 @@ variable "mode" {
   description = "The mode of operation for the module (setup)"
   default     = ""
 }
+
+variable "ibmcloud_api_key" {
+  type        = string
+  description = "The IBM Cloud api token"
+}
+
+variable "cluster_name" {
+  type        = string
+  description = "The Name of the cluster"
+}
+
+variable "cos_instance_id" {
+  type        = string
+  description = "The Object Storage instance id"
+}
+
+variable "cos_instance_name" {
+  type        = string
+  description = "The Object Storage instance name"
+}
+
+variable "cos_bucket_cross_region_location" {
+  type        = string
+  description = "Cross-regional bucket location. Supported values are us, eu, and ap."
+  default     = "eu"
+}
+
+variable "cos_bucket_storage_class" {
+  type        = string
+  description = "The storage class that you want to use for the bucket. Supported values are standard, vault, cold, flex, and smart."
+  default     = "standard"
+}

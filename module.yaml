@@ -23,11 +23,15 @@ versions:
       refs:
         - source: github.com/cloud-native-toolkit/terraform-k8s-namespace
           version: ">= 2.1.0"
-    - id: cos-bucket
+    - id: cos
       refs:
-        - source: github.com/cloud-native-toolkit/terraform-ibm-object-storage-bucket
-          version: ">= 0.7.0"
+        - source: github.com/cloud-native-toolkit/terraform-ibm-object-storage
+          version: ">= 3.4.0"
   variables:
+    - name: cluster_name
+      moduleRef:
+        id: cluster
+        output: name
     - name: cluster_type
       moduleRef:
         id: cluster
@@ -49,15 +53,19 @@ versions:
         id: namespace
         output: name
         discriminator: tools
-    - name: cos_bucket_name
-      moduleRef:
-        id: cos-bucket
-        output: bucket_name
     - name: cos_instance_id
       moduleRef:
-        id: cos-bucket
+        id: cos
         output: id
-    - name: cos_instance_crn
+    - name: cos_instance_name
       moduleRef:
-        id: cos-bucket
-        output: crn
+        id: cos
+        output: name
+    - name: ibmcloud_api_key
+      scope: global
+    - name: cos_bucket_cross_region_location
+      scope: global
+      optionnal: true
+    - name: cos_bucket_storage_class
+      scope: global
+      optionnal: true

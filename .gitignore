@@ -2,3 +2,8 @@
 *.iml
 
 *.ignore.*
+
+.terraform/
+.terraform.lock.hcl
+.tmp
+terraform.tfvars
