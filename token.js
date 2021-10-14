@@ -1,1 +1,0 @@
-console.log(JSON.stringify({ token: Math.random().toString(36).substr(2) }));

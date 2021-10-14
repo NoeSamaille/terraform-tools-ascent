@@ -49,12 +49,6 @@ variable "vpc_cluster" {
   default     = false
 }
 
-variable "tls_secret_name" {
-  type        = string
-  description = "The name of the secret containing the tls certificate values"
-  default     = ""
-}
-
 variable "gitops_dir" {
   type        = string
   description = "Directory where the gitops repo content should be written"
@@ -101,4 +95,27 @@ variable "cos_resource_location" {
   type        = string
   description = "Geographic location of the resource (e.g. us-south, us-east)"
   default     = "global"
+}
+
+variable "login_user" {
+  type        = string
+  description = "The username to log in to openshift"
+  default     = ""
+}
+
+variable "login_password" {
+  type        = string
+  description = "The password to log in to openshift"
+  default     = ""
+}
+
+variable "login_token" {
+  type        = string
+  description = "The token to log in to openshift"
+  default     = ""
+}
+
+variable "server_url" {
+  type        = string
+  description = "The url to the server"
 }

@@ -5,8 +5,13 @@
 
 .terraform/
 .terraform.lock.hcl
+.terraform.tfstate.lock.info
 .tmp
 terraform.tfvars
 
 *.properties
 workspace
+gitops/
+.kubeconfig
+terraform.tfstate
+terraform.tfstate.backup

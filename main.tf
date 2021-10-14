@@ -1,8 +1,31 @@
+# resource "null_resource" "print_vars" {
+#   provisioner "local-exec" {
+#     command = <<EOT
+#       cat <<EOF
+#       mode = ${var.mode}
+#       cluster_name = ${var.cluster_name}
+#       cluster_type = ${var.cluster_type}
+#       cluster_config_file = ${var.cluster_config_file}
+#       releases_namespace = ${var.releases_namespace}
+#       cluster_ingress_hostname = ${var.cluster_ingress_hostname}
+#       tls_secret_name = ${var.tls_secret_name}
+#       gitops_dir = ${var.gitops_dir}
+#       releases_namespace = ${var.releases_namespace}
+#       cos_instance_id = ${var.cos_instance_id}
+#       cos_bucket_cross_region_location = ${var.cos_bucket_cross_region_location}
+#       cos_bucket_storage_class = ${var.cos_bucket_storage_class}
+#       cos_bucket_storage_class = ${var.cos_bucket_storage_class}
+#       EOF
+#     EOT
+#   }
+# }
+
+
 data "external" "mongo_root_password" {
-  program = ["node", "${path.module}/token.js"]
+  program = ["${path.module}/token.sh"]
 }
 data "external" "mongo_password" {
-  program = ["node", "${path.module}/token.js"]
+  program = ["${path.module}/token.sh"]
 }
 locals {
   cluster_type = var.cluster_type == "kubernetes" ? "kubernetes" : "openshift"
@@ -13,7 +36,7 @@ locals {
   chart_dir_bff    = "${local.gitops_dir}/${local.chart_name_bff}"
   chart_name_ui   = "ascent-ui"
   chart_dir_ui    = "${local.gitops_dir}/${local.chart_name_ui}"
-  chart_name_mongo   = "mongodb"
+  chart_name_mongo   = "ascent-mongodb"
   chart_dir_mongo    = "${local.gitops_dir}/${local.chart_name_mongo}"
   global = {
     ingressSubdomain = var.cluster_ingress_hostname
@@ -56,7 +79,7 @@ locals {
       provider = "openshift"
     }
     partOf = "ascent"
-    connectsTo = ""
+    connectsTo = local.chart_name_mongo
     runtime = ""
   }
   ascent_ui_config = {
@@ -96,7 +119,7 @@ locals {
       provider = "openshift"
     }
     partOf = "ascent"
-    connectsTo = "ascent-bff"
+    connectsTo = local.chart_name_bff
     runtime = "js"
   }
   mongodb_config = {
@@ -146,7 +169,7 @@ resource "null_resource" "delete_consolelink" {
 
 # Create K8s OAuthClient, secrets and configmaps required by ascent charts
 data "external" "oauth_client_secret" {
-  program = ["node", "${path.module}/token.js"]
+  program = ["${path.module}/token.sh"]
 }
 resource "null_resource" "setup_oauth_client" {
   provisioner "local-exec" {
@@ -156,8 +179,8 @@ apiVersion: oauth.openshift.io/v1
 grantMethod: auto
 kind: OAuthClient
 metadata:
-name: ascent
-selfLink: /apis/oauth.openshift.io/v1/oauthclients/ascent
+  name: ascent
+  selfLink: /apis/oauth.openshift.io/v1/oauthclients/ascent
 redirectURIs:
 - ${local.endpoint_url}/login/callback
 secret: ${data.external.oauth_client_secret.result.token}
@@ -192,12 +215,12 @@ resource "null_resource" "create_mongo_secret" {
   }
 }
 data "external" "instance_id" {
-  program = ["node", "${path.module}/token.js"]
+  program = ["${path.module}/token.sh"]
 }
 resource "null_resource" "create_ascent_cm" {
   provisioner "local-exec" {
     command = <<EOT
-      kubectl create configmap ascent --from-literal=route="${local.endpoint_url}" --from-literal=api-host="http://${local.chart_name_bff}" --from-literal=instance-id=${data.external.instance_id.result.token}
+      kubectl create configmap ascent --from-literal=route="${local.endpoint_url}" --from-literal=api-host="http://${local.chart_name_bff}" --from-literal=instance-id=${data.external.instance_id.result.token} -n ${var.releases_namespace}
     EOT
 
     environment = {
@@ -243,6 +266,7 @@ resource "local_file" "values_mongo" {
   content  = yamlencode({
     global = local.global
     mongodb = local.mongodb_config
+    partOf = "ascent"
   })
   filename = "${local.chart_dir_mongo}/values.yaml"
 }
@@ -259,7 +283,7 @@ resource "helm_release" "ascent_mongo" {
   ]
   count = var.mode != "setup" ? 1 : 0
 
-  name         = "ascent-mongodb"
+  name         = local.chart_name_mongo
   chart        = local.chart_dir_mongo
   namespace    = var.releases_namespace
   force_update = true
