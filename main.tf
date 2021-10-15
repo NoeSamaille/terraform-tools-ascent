@@ -59,10 +59,10 @@ locals {
       port = 80
     }
     route = {
-      enabled = false
+      enabled = local.cluster_type == "openshift" ? true : false
     }
     ingress = {
-      enabled = true
+      enabled = local.cluster_type == "openshift" ? false : true
       appid = {
         enabled = false
         requestType = "web"
@@ -83,6 +83,7 @@ locals {
     runtime = ""
   }
   ascent_ui_config = {
+    tlsSecretName = var.tls_secret_name
     global = local.global
     replicaCount = 1
     logLevel = "debug"
@@ -99,10 +100,10 @@ locals {
       port = 80
     }
     route = {
-      enabled = false
+      enabled = local.cluster_type == "openshift" ? true : false
     }
     ingress = {
-      enabled = true
+      enabled = local.cluster_type == "openshift" ? false : true
       appid = {
         enabled = false
         requestType = "web"
@@ -179,6 +180,7 @@ apiVersion: oauth.openshift.io/v1
 grantMethod: auto
 kind: OAuthClient
 metadata:
+  namespace: ${var.releases_namespace}
   name: ascent
   selfLink: /apis/oauth.openshift.io/v1/oauthclients/ascent
 redirectURIs:
