@@ -36,6 +36,8 @@ locals {
   chart_dir_bff    = "${local.gitops_dir}/${local.chart_name_bff}"
   chart_name_ui   = "ascent-ui"
   chart_dir_ui    = "${local.gitops_dir}/${local.chart_name_ui}"
+  chart_name_injector   = "ascent-injector"
+  chart_dir_injector    = "${local.gitops_dir}/${local.chart_name_injector}"
   chart_name_mongo   = "ascent-mongodb"
   chart_dir_mongo    = "${local.gitops_dir}/${local.chart_name_mongo}"
   global = {
@@ -154,6 +156,16 @@ locals {
       mountPath = "/bitnami/mongodb"
     }
   }
+  ascent_injector_config = {
+    image = {
+      repository = "quay.io/noesamaille0/ascent-injector"
+      tag = "0.0.2"
+      pullPolicy = "IfNotPresent"
+      port = 80
+    }
+    partOf = "ascent"
+    connectsTo = "ascent-mongodb"
+  }
 }
 
 resource "null_resource" "delete_consolelink" {
@@ -255,6 +267,18 @@ resource "null_resource" "create_cos_secret" {
     }
   }
 }
+resource "null_resource" "edit_cos_secret" {
+  depends_on = [null_resource.create_cos_secret]
+  provisioner "local-exec" {
+    command = <<EOT
+      BINDING=$(kubectl get secret ascent-cos-config -n ${var.releases_namespace} -o json | jq '.data["binding"]' | sed "s/\"//g") && kubectl get secret ascent-cos-config -n ${var.releases_namespace} -o json | jq --arg binding "$(echo $BINDING | base64 -d | sed "s/https:\/\/control.cloud-object-storage.cloud.ibm.com\/v2\/endpoints/s3.eu.cloud-object-storage.appdomain.cloud/g" | base64)" '.data["binding"]=$binding' | kubectl apply -f -
+    EOT
+
+    environment = {
+      KUBECONFIG = var.cluster_config_file
+    }
+  }
+}
 
 # Set up MongoDB chart
 resource "null_resource" "setup_chart_mongo" {
@@ -314,8 +338,9 @@ resource "helm_release" "ascent_bff" {
   depends_on = [
     null_resource.create_oauth_secret,
     null_resource.create_mongo_secret,
-    null_resource.create_cos_secret,
+    null_resource.edit_cos_secret,
     null_resource.create_ascent_cm,
+    helm_release.ascent_mongo,
     local_file.values_bff
   ]
   count = var.mode != "setup" ? 1 : 0
@@ -349,12 +374,45 @@ resource "helm_release" "ascent_ui" {
   depends_on = [
     null_resource.create_oauth_secret,
     null_resource.create_ascent_cm,
+    helm_release.ascent_bff,
     local_file.values_ui
   ]
   count = var.mode != "setup" ? 1 : 0
 
   name         = local.chart_name_ui
   chart        = local.chart_dir_ui
+  namespace    = var.releases_namespace
+  force_update = true
+  replace      = true
+}
+
+# Set up Ascent Injector chart
+resource "null_resource" "setup_chart_injector" {
+  provisioner "local-exec" {
+    command = "mkdir -p ${local.chart_dir_injector} && cp -R ${path.module}/chart/${local.chart_name_injector}/* ${local.chart_dir_injector}"
+  }
+}
+resource "local_file" "values_injector" {
+  depends_on = [null_resource.setup_chart_injector, null_resource.delete_consolelink]
+
+  content  = yamlencode(local.ascent_injector_config)
+  filename = "${local.chart_dir_injector}/values.yaml"
+}
+resource "null_resource" "print_values_injector" {
+  depends_on = [local_file.values_injector]
+  provisioner "local-exec" {
+    command = "cat ${local_file.values_injector.filename}"
+  }
+}
+resource "helm_release" "ascent_injector" {
+  depends_on = [
+    helm_release.ascent_bff,
+    local_file.values_injector
+  ]
+  count = var.mode != "setup" ? 1 : 0
+
+  name         = local.chart_name_injector
+  chart        = local.chart_dir_injector
   namespace    = var.releases_namespace
   force_update = true
   replace      = true
